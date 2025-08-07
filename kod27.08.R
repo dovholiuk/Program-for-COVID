@@ -5,6 +5,9 @@ process_data <- function(path) {
   ld50_all <- c()
   false_negatives <- list()
   false_positives <- list()
+  test_indices <- list()
+  test_samples <- list()
+  error_counts <- list()
 
   n <- nrow(data)
   k <- round(0.6 * n)
@@ -17,12 +20,15 @@ process_data <- function(path) {
 
     fn_list <- list()
     fp_list <- list()
+    test_list <- list()
+    test_sample_list <- list()
+    errors_list <- numeric(100)
 
     for (i in 1:100) {
       train_idx <- sample(1:n, k)
       train <- data[train_idx, ]
       test <- data[-train_idx, ]
-      global_idx <- setdiff(1:n, train_idx)
+      test_idx <- setdiff(1:n, train_idx)
 
       m <- glm(train$Gr ~ train[[pred]], family = binomial)
       b_iter <- coef(m)
@@ -33,17 +39,30 @@ process_data <- function(path) {
       fn_local <- which(test$Gr == 1 & pred_class == 0)
       fp_local <- which(test$Gr == 0 & pred_class == 1)
 
-      fn_list[[i]] <- global_idx[fn_local]
-      fp_list[[i]] <- global_idx[fp_local]
+      fn_list[[i]] <- test_idx[fn_local]
+      fp_list[[i]] <- test_idx[fp_local]
+      test_list[[i]] <- test_idx
+      test_sample_list[[i]] <- test
+
+      FN <- length(fn_local)
+      FP <- length(fp_local)
+
+      errors_list[i] <- FN + FP
     }
 
     false_negatives[[pred]] <- fn_list
     false_positives[[pred]] <- fp_list
+    test_indices[[pred]] <- test_list
+    test_samples[[pred]] <- test_sample_list
+    error_counts[[pred]] <- errors_list
   }
 
   return(list(
     ld50 = data.frame(Predictor = names(ld50_all), LD50 = as.numeric(ld50_all)),
     false_negatives = false_negatives,
-    false_positives = false_positives
+    false_positives = false_positives,
+    test_indices = test_indices,
+    test_samples = test_sample_list,
+    error_counts = error_counts
   ))
 }
