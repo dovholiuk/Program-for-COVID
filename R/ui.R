@@ -3,7 +3,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       fileInput("file", "Оберіть CSV файл", accept = ".csv"),
-      downloadButton("download_all", "Зберегти все в один CSV")
+      downloadButton("download_all", "Зберегти в Excel (.xlsx)")
     ),
     mainPanel(
       tabsetPanel(

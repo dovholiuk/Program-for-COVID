@@ -34,51 +34,78 @@ server <- function(input, output, session) {
     )
   })
 
-  # Експорт в один CSV
-  output$download_all <- downloadHandler(
-    filename = function() paste0("all_results-", Sys.Date(), ".csv"),
-    contentType = "text/csv",
-    content = function(file) {
-      r <- res()
+ output$download_all <- downloadHandler(
+  filename = function() paste0("all_results-", Sys.Date(), ".xlsx"),
+  contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  content = function(file) {
+    # Пакет для запису Excel
+    library(writexl)
 
-      ld50 <- r$ld50
-      names(ld50) <- c("Predictor", "LD50")
+    r <- res()  # результат process_data()
 
-      preds <- unique(c(
-        ld50$Predictor,
-        names(r$false_negatives %||% list()),
-        names(r$false_positives %||% list()),
-        names(r$test_indices   %||% list()),
-        names(r$test_samples   %||% list()),
-        names(r$error_counts   %||% list())
-      ))
-      preds <- intersect(PREDICTOR_ORDER, preds)
+    # ---- 1) LD50 ----
+    ld50 <- r$ld50
+    if (!is.null(ld50) && nrow(ld50) > 0) {
+      names(ld50) <- c("Predictor","LD50")
+    } else {
+      ld50 <- data.frame(Predictor=character(), LD50=numeric())
+    }
 
-      out <- data.frame(
-        Predictor       = preds,
-        LD50            = NA_real_,
-        False_Negatives = NA_character_,
-        False_Positives = NA_character_,
-        Test_Indices    = NA_character_,
-        Test_Samples    = NA_character_,
-        Error_Count     = NA_real_,
+    # ---- 2) Error Counts — середнє за ітерацію ----
+    ec_raw <- r$error_counts
+    err_df <- if (!is.null(ec_raw) && length(ec_raw) > 0) {
+      data.frame(
+        Predictor   = names(ec_raw),
+        Error_Count = sapply(ec_raw, function(v) {
+          v <- as.numeric(v); n <- length(v); if (n > 0) sum(v, na.rm = TRUE)/n else NA_real_
+        }),
         stringsAsFactors = FALSE
       )
-
-      if (!is.null(ld50) && nrow(ld50) > 0) {
-        out$LD50 <- ld50$LD50[match(out$Predictor, ld50$Predictor)]
-      }
-      out$False_Negatives <- sapply(out$Predictor, function(p) collapse_list_for_predictor(r$false_negatives, p))
-      out$False_Positives <- sapply(out$Predictor, function(p) collapse_list_for_predictor(r$false_positives, p))
-      out$Test_Indices    <- sapply(out$Predictor, function(p) collapse_list_for_predictor(r$test_indices,    p))
-      out$Test_Samples    <- sapply(out$Predictor, function(p) collapse_list_for_predictor(r$test_samples,    p))
-      out$Error_Count <- sapply(out$Predictor, function(p) {
-        if (is.null(r$error_counts) || is.null(r$error_counts[[p]])) return(NA_real_)
-        v <- as.numeric(r$error_counts[[p]])
-        n <- length(v)
-        if (n > 0) sum(v, na.rm = TRUE) / n else NA_real_
-      })
-      write.csv(out, file, row.names = FALSE, fileEncoding = "UTF-8")
+    } else {
+      data.frame(Predictor=character(), Error_Count=numeric())
     }
-  )
-}
+
+    # ---- 3) Хелпер: list[predictor]->list[it]->indices -> довга таблиця ----
+    list_to_long <- function(x) {
+      if (is.null(x) || length(x) == 0) {
+        return(data.frame(Predictor=character(), Iteration=integer(), Indices=character()))
+      }
+      preds <- names(x); if (is.null(preds)) preds <- rep("All", length(x))
+      do.call(rbind, lapply(seq_along(x), function(i){
+        elem <- x[[i]]
+        if (is.list(elem)) {
+          data.frame(
+            Predictor = preds[i],
+            Iteration = seq_along(elem),
+            Indices   = sapply(elem, function(v) paste(as.character(v), collapse = ", ")),
+            stringsAsFactors = FALSE
+          )
+        } else {
+          data.frame(
+            Predictor = preds[i],
+            Iteration = NA_integer_,
+            Indices   = paste(as.character(elem), collapse = ", "),
+            stringsAsFactors = FALSE
+          )
+        }
+      }))
+    }
+
+    fn_long <- list_to_long(r$false_negatives)
+    fp_long <- list_to_long(r$false_positives)
+    ti_long <- list_to_long(r$test_indices)
+    ts_long <- list_to_long(r$test_samples)
+
+    # ---- 4) Формуємо аркуші й пишемо в .xlsx ----
+    sheets <- list(
+      LD50            = ld50,
+      False_Negatives = fn_long,
+      False_Positives = fp_long,
+      Test_Indices    = ti_long,
+      Test_Samples    = ts_long,
+      Error_Counts    = err_df
+    )
+
+    writexl::write_xlsx(sheets, path = file)
+  }
+)}

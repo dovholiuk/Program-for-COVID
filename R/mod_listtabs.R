@@ -30,11 +30,11 @@ mod_listtabs_server <- function(id, r_list, predictors_order) {
         p <- pred
         out_id <- paste0("tbl_", idify(p))
         output[[out_id]] <- renderTable({
-          data.frame(
-            Iteration = seq_along(x[[p]]),
-            Indices   = sapply(x[[p]], function(v) paste(v, collapse = ", ")),
-            stringsAsFactors = FALSE
-          )
+            data.frame(
+                Iteration = seq_along(x[[p]]),
+                Indices   = sapply(x[[p]], collapse_indices),
+                stringsAsFactors = FALSE
+            )
         })
       })
     })
