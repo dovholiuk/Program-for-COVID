@@ -6,7 +6,6 @@ process_data <- function(path) {
   false_negatives <- list()
   false_positives <- list()
   test_indices <- list()
-  test_samples <- list()
   error_counts <- list()
 
   n <- nrow(data)
@@ -21,7 +20,6 @@ process_data <- function(path) {
     fn_list <- list()
     fp_list <- list()
     test_list <- list()
-    test_sample_list <- list()
     errors_list <- numeric(100)
 
     for (i in 1:100) {
@@ -42,7 +40,6 @@ process_data <- function(path) {
       fn_list[[i]] <- test_idx[fn_local]
       fp_list[[i]] <- test_idx[fp_local]
       test_list[[i]] <- test_idx
-      test_sample_list[[i]] <- test
 
       FN <- length(fn_local)
       FP <- length(fp_local)
@@ -53,7 +50,6 @@ process_data <- function(path) {
     false_negatives[[pred]] <- fn_list
     false_positives[[pred]] <- fp_list
     test_indices[[pred]] <- test_list
-    test_samples[[pred]] <- test_sample_list
     error_counts[[pred]] <- errors_list
   }
 
@@ -62,7 +58,6 @@ process_data <- function(path) {
     false_negatives = false_negatives,
     false_positives = false_positives,
     test_indices = test_indices,
-    test_samples = test_sample_list,
     error_counts = error_counts
   ))
 }
