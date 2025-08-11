@@ -11,7 +11,6 @@ ui <- fluidPage(
         tabPanel("False Negatives", mod_listtabs_ui("fn")),
         tabPanel("False Positives", mod_listtabs_ui("fp")),
         tabPanel("Test Indices",    mod_listtabs_ui("ti")),
-        tabPanel("Test Samples",    mod_listtabs_ui("ts")),
         tabPanel("Error Counts",    tableOutput("tbl_err"))
       )
     )

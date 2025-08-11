@@ -94,7 +94,6 @@ server <- function(input, output, session) {
     fn_long <- list_to_long(r$false_negatives)
     fp_long <- list_to_long(r$false_positives)
     ti_long <- list_to_long(r$test_indices)
-    ts_long <- list_to_long(r$test_samples)
 
     # ---- 4) Формуємо аркуші й пишемо в .xlsx ----
     sheets <- list(
@@ -102,7 +101,6 @@ server <- function(input, output, session) {
       False_Negatives = fn_long,
       False_Positives = fp_long,
       Test_Indices    = ti_long,
-      Test_Samples    = ts_long,
       Error_Counts    = err_df
     )
 
